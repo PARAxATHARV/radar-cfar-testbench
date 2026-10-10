@@ -74,13 +74,28 @@ class RadarConfig:
 
     @property
     def compression_gain_db(self) -> float:
-        """SNR improvement from pulse compression, 10*log10(B * T_p)."""
-        return 10.0 * np.log10(self.time_bandwidth_product)
+        """SNR improvement from pulse compression.
+
+        Deliberately `10*log10(n_pulse_samples)` and **not** the textbook
+        `10*log10(B*T)`. The B*T figure assumes the receiver samples
+        critically, at F_s = B. This one samples at twice that, so the matched
+        filter sums 100 samples rather than 50, and the coherent gain against
+        white noise at the ADC rate is 20 dB rather than 17. Quoting B*T here
+        would understate the measured gain by 3 dB.
+        """
+        return 10.0 * np.log10(self.n_pulse_samples)
 
     @property
     def integration_gain_db(self) -> float:
-        """SNR improvement from coherently summing n_pulses in the Doppler FFT."""
-        return 10.0 * np.log10(self.n_pulses)
+        """SNR improvement from coherently summing pulses in the Doppler FFT.
+
+        `(sum w)^2 / sum(w^2)` for the Hann window actually applied, not the
+        `10*log10(n_pulses)` of an unwindowed sum. The window suppresses
+        Doppler sidelobes but costs coherent gain - about 2 dB here - and
+        ignoring that would overstate sensitivity.
+        """
+        w = np.hanning(self.n_pulses)
+        return 10.0 * np.log10(w.sum() ** 2 / np.sum(w**2))
 
     @property
     def processing_gain_db(self) -> float:

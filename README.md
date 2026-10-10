@@ -10,7 +10,7 @@ and measures where they break.
 [![ci](https://github.com/PARAxATHARV/radar-cfar-testbench/actions/workflows/ci.yml/badge.svg)](https://github.com/PARAxATHARV/radar-cfar-testbench/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![licence](https://img.shields.io/badge/licence-MIT-green)
-![tests](https://img.shields.io/badge/tests-22%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-24%20passing-brightgreen)
 
 <img src="reports/figures/range_doppler.png" width="100%" alt="Range-Doppler map with ground truth and detections">
 
@@ -69,6 +69,29 @@ Three results, none of them the textbook expectation:
 <!-- /RESULTS-SUMMARY -->
 
 Full numbers, figures and the reasoning: **[reports/characterization.md](reports/characterization.md)**.
+
+---
+
+## Show me, don't tell me
+
+Every claim below has a runnable experiment that prints its own evidence:
+
+```bash
+python scripts/explain.py        # list them
+python scripts/explain.py 3      # run one
+```
+
+| | Experiment | Question it settles |
+|---|---|---|
+| 1 | Why a chirp | Can a pulse be strong and short at once? |
+| 2 | Pulse compression | Where does the 36 dB of gain actually come from? |
+| 3 | Velocity is phase | How are centimetres of movement measurable? |
+| 4 | Fixed vs adaptive threshold | What exactly breaks without CFAR? |
+| 5 | Guard cells | Can a target hide itself? |
+| 6 | Correlation vs heavy tails | Which clutter actually reaches the detector? |
+
+Changing a parameter and re-running is the fastest way to check whether a claim here
+is one you have actually understood.
 
 ---
 
@@ -218,9 +241,10 @@ radar-cfar-testbench/
 │
 ├── scripts/
 │   ├── demo.py           one frame end to end, with figures
+│   ├── explain.py        six experiments demonstrating the physics
 │   └── characterize.py   the full sweep → report + figures
 │
-├── tests/                22 correctness gates
+├── tests/                24 correctness gates
 ├── reports/              generated, never hand-written
 │   ├── characterization.md
 │   └── figures/*.png
@@ -291,7 +315,7 @@ comfortably detectable, which is the entire purpose of the processing chain.
 | **Numerics** | NumPy — array maths, FFTs, seeded random generation |
 | **Signal processing & statistics** | SciPy — `fftconvolve` for pulse compression, `ndimage` for the CFAR sliding windows, `optimize.brentq` to invert the OS-CFAR threshold equation, `special` for the log-gamma terms |
 | **Visualisation** | Matplotlib |
-| **Testing** | pytest — 22 correctness gates |
+| **Testing** | pytest — 24 correctness gates |
 | **Lint / types** | ruff, mypy |
 | **Container** | Docker |
 | **CI** | GitHub Actions — tests on 3.11 and 3.12, then regenerates the report |
@@ -360,8 +384,10 @@ Each is a modelling choice with a consequence, named deliberately.
 pip install -e ".[dev]"
 
 python scripts/demo.py           # one frame, end to end
+python scripts/explain.py        # list the six experiments
+python scripts/explain.py 6      # run one of them
 python scripts/characterize.py   # the full sweep (~40 s), writes reports/
-pytest -q                        # 22 correctness gates
+pytest -q                        # 24 correctness gates
 ```
 
 Or in Docker:

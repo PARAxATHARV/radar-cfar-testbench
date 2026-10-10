@@ -11,6 +11,7 @@ import numpy as np
 import pytest
 
 from radarbench import (
+    Background,
     CaCfar,
     CfarGeometry,
     KDistributed,
@@ -53,6 +54,49 @@ def test_matched_filter_compresses_the_chirp():
     assert compressed[peak] == pytest.approx(c.n_pulse_samples, rel=1e-9)
     sidelobes = np.concatenate([compressed[: peak - 4], compressed[peak + 5 :]])
     assert 20 * np.log10(compressed[peak] / sidelobes.max()) > 12.0
+
+
+class _NoBackground(Background):
+    """Signal with no background, so processing gain can be measured directly."""
+
+    name = "none"
+
+    def sample(self, shape, rng):  # noqa: ARG002
+        return np.zeros(shape, dtype=complex)
+
+
+def test_processing_gain_matches_the_claim():
+    """`processing_gain_db` is quoted in the README and in every figure
+    subtitle. Measure the real chain and fail if the claim drifts from it.
+
+    An advertised sensitivity nobody checks is how a bench ends up lying
+    confidently: the number stays plausible while the code moves underneath.
+    """
+    c = RadarConfig()
+    rng = np.random.default_rng(0)
+    signal = simulate_frame(
+        c, [Target(1500.0, 40.0, snr_db=0.0)], _NoBackground(), rng
+    )
+    noise = simulate_frame(c, [], Thermal(), rng)
+
+    def snr_db(sig_power: np.ndarray, noise_power: np.ndarray) -> float:
+        return 10 * np.log10(sig_power.max() / noise_power.mean())
+
+    raw = snr_db(np.abs(signal) ** 2, np.abs(noise) ** 2)
+    processed = snr_db(range_doppler(signal, c), range_doppler(noise, c))
+
+    assert processed - raw == pytest.approx(c.processing_gain_db, abs=1.0)
+
+
+def test_compression_gain_is_not_the_critically_sampled_figure():
+    """Guards a specific, easy mistake: quoting 10*log10(B*T) while sampling
+    at twice the Nyquist rate understates the real gain by 3 dB."""
+    c = RadarConfig()
+    assert c.sample_rate_hz == pytest.approx(2 * c.bandwidth_hz)
+    assert c.compression_gain_db == pytest.approx(
+        10 * np.log10(c.n_pulse_samples)
+    )
+    assert c.compression_gain_db > 10 * np.log10(c.time_bandwidth_product) + 2.5
 
 
 # --- simulation and DSP ------------------------------------------------------

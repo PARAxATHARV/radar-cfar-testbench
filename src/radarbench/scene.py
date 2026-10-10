@@ -65,8 +65,12 @@ class Background(ABC):
         A single honest number for "how heavy is the tail". Thermal noise sits
         near 8.4 dB; anything well above that will stress a cell-averaging
         detector.
+
+        Drawn as a 2D frame rather than a flat vector, because the correlated
+        models are defined across both axes and cannot produce a 1D sample.
         """
-        power = np.abs(self.sample((n,), rng)) ** 2
+        rows = 64
+        power = np.abs(self.sample((rows, max(n // rows, 1)), rng)) ** 2
         return float(10.0 * np.log10(np.percentile(power, 99.9) / power.mean()))
 
 
